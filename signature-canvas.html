@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unterschrift Canvas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        #signatureCanvas {
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            cursor: crosshair;
+            margin: 20px 0;
+            background: white;
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            margin: 0 10px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        button.clear {
+            background: #dc3545;
+        }
+        
+        button.clear:hover {
+            background: #c82333;
+        }
+        
+        .info {
+            color: #666;
+            font-size: 14px;
+            margin-top: 15px;
+        }
+        
+        .stroke-width {
+            margin: 20px 0;
+        }
+        
+        .stroke-width label {
+            margin-right: 10px;
+            color: #333;
+        }
+        
+        .stroke-width input {
+            width: 100px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Unterschrift erstellen</h1>
+        
+        <div class="stroke-width">
+            <label for="strokeWidth">Strichstärke:</label>
+            <input type="range" id="strokeWidth" min="1" max="10" value="3">
+            <span id="strokeValue">3</span>px
+        </div>
+        
+        <canvas id="signatureCanvas" width="600" height="300"></canvas>
+        
+        <div class="controls">
+            <button id="clearBtn" class="clear">Löschen</button>
+            <button id="downloadBtn">Als PNG herunterladen</button>
+        </div>
+        
+        <div class="info">
+            Klicken und ziehen Sie mit der Maus, um Ihre Unterschrift zu erstellen
+        </div>
+    </div>
+
+    <script>
+        // Canvas und Kontext initialisieren
+        const canvas = document.getElementById('signatureCanvas');
+        const ctx = canvas.getContext('2d');
+        const clearBtn = document.getElementById('clearBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const strokeWidthSlider = document.getElementById('strokeWidth');
+        const strokeValueDisplay = document.getElementById('strokeValue');
+
+        // Canvas-Eigenschaften
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        // Canvas-Stil konfigurieren
+        ctx.strokeStyle = '#000000';
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.lineWidth = 3;
+
+        // Strichstärke-Slider Event
+        strokeWidthSlider.addEventListener('input', (e) => {
+            ctx.lineWidth = e.target.value;
+            strokeValueDisplay.textContent = e.target.value;
+        });
+
+        // Zeichnen-Funktionen
+        function startDrawing(e) {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            lastX = e.clientX - rect.left;
+            lastY = e.clientY - rect.top;
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const currentX = e.clientX - rect.left;
+            const currentY = e.clientY - rect.top;
+
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(currentX, currentY);
+            ctx.stroke();
+
+            lastX = currentX;
+            lastY = currentY;
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        // Mouse-Events
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+
+        // Touch-Events für mobile Geräte
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousedown', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousemove', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            const mouseEvent = new MouseEvent('mouseup', {});
+            canvas.dispatchEvent(mouseEvent);
+        });
+
+        // Löschen-Button
+        clearBtn.addEventListener('click', () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        });
+
+        // Download-Button
+        downloadBtn.addEventListener('click', () => {
+            // Temporäres Canvas mit weißem Hintergrund erstellen
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+
+            // Weißen Hintergrund zeichnen
+            tempCtx.fillStyle = 'white';
+            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+
+            // Unterschrift darüber zeichnen
+            tempCtx.drawImage(canvas, 0, 0);
+
+            // Download erstellen
+            const link = document.createElement('a');
+            link.download = 'unterschrift_' + new Date().getTime() + '.png';
+            link.href = tempCanvas.toDataURL('image/png');
+            link.click();
+        });
+
+        // Verhindern, dass das Canvas das Kontextmenü anzeigt
+        canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+    </script>
+</body>
+</html> 
