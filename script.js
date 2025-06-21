@@ -70,15 +70,28 @@ resizeBtn.addEventListener('click', () => {
 });
 
 // Drawing functions
+function getCanvasCoordinates(event) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    return {
+        x: (event.clientX - rect.left) * scaleX,
+        y: (event.clientY - rect.top) * scaleY
+    };
+}
+
 function drawstart(event) {
+    const coords = getCanvasCoordinates(event);
     ctx.beginPath();
-    ctx.moveTo(event.pageX - canvas.offsetLeft, event.pageY - canvas.offsetTop);
+    ctx.moveTo(coords.x, coords.y);
     isIdle = false;
 }
 
 function drawmove(event) {
     if (isIdle) return;
-    ctx.lineTo(event.pageX - canvas.offsetLeft, event.pageY - canvas.offsetTop);
+    const coords = getCanvasCoordinates(event);
+    ctx.lineTo(coords.x, coords.y);
     ctx.stroke();
 }
 
