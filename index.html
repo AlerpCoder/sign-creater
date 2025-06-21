@@ -23,40 +23,29 @@
         </div>
         
         <div class="controls-section">
-            <div class="control-group">
-                <label for="strokeWidth">Strichstärke:</label>
-                <input type="range" id="strokeWidth" min="1" max="20" value="3">
-                <span id="strokeValue">3</span>px
+            <div class="controls-top">
+                <div class="control-group">
+                    <label for="strokeWidth">Strichstärke:</label>
+                    <input type="range" id="strokeWidth" min="1" max="20" value="3">
+                    <span id="strokeValue">3</span>px
+                </div>
+                
+                <div class="control-group">
+                    <label for="strokeColor">Farbe:</label>
+                    <input type="color" id="strokeColor" value="#000000">
+                </div>
             </div>
             
-            <div class="control-group">
-                <label for="brushType">Pinsel-Art:</label>
-                <select id="brushType">
-                    <option value="round">Rund</option>
-                    <option value="square">Eckig</option>
-                    <option value="pen">Pen</option>
-                    <option value="ballpoint">Kugelschreiber</option>
-                    <option value="marker">Marker</option>
-                    <option value="brush">Pinsel</option>
-                    <option value="calligraphy">Kalligrafie</option>
-                    <option value="pencil">Bleistift</option>
-                </select>
-            </div>
-            
-            <div class="control-group">
-                <label for="strokeColor">Farbe:</label>
-                <input type="color" id="strokeColor" value="#000000">
-            </div>
-        </div>
-        
-        <div class="canvas-wrapper">
-            <div class="canvas-container">
-                <canvas id="signatureCanvas" width="800" height="400"></canvas>
+            <div class="canvas-wrapper">
+                <div class="canvas-container">
+                    <canvas id="signatureCanvas" width="800" height="400"></canvas>
+                </div>
             </div>
         </div>
         
         <div class="controls">
             <button id="clearBtn" class="clear">Löschen</button>
+            <button id="fullscreenBtn">Vollbild</button>
             <button id="downloadBtn">Als PNG herunterladen</button>
         </div>
         

@@ -21,13 +21,7 @@ h1 {
     margin-bottom: 30px;
 }
 
-.canvas-wrapper {
-    margin: 20px 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-}
+
 
 .canvas-container {
     border: 2px solid #ddd;
@@ -88,9 +82,27 @@ button.clear:hover {
     background: #f8f9fa;
     border-radius: 5px;
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.canvas-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+}
+
+.controls-top {
+    display: flex;
     flex-wrap: wrap;
     justify-content: center;
     gap: 20px;
+    margin-bottom: 20px;
 }
 
 .control-group {

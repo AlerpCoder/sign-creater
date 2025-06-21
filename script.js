@@ -5,16 +5,15 @@ const clearBtn = document.getElementById('clearBtn');
 const downloadBtn = document.getElementById('downloadBtn');
 const strokeWidthSlider = document.getElementById('strokeWidth');
 const strokeValueDisplay = document.getElementById('strokeValue');
-const brushTypeSelect = document.getElementById('brushType');
+
 const strokeColorPicker = document.getElementById('strokeColor');
 const canvasWidthInput = document.getElementById('canvasWidth');
 const canvasHeightInput = document.getElementById('canvasHeight');
 const resizeBtn = document.getElementById('resizeBtn');
+const fullscreenBtn = document.getElementById('fullscreenBtn');
 
 // Canvas-Eigenschaften
-let isDrawing = false;
-let lastX = 0;
-let lastY = 0;
+let isIdle = true;
 
 // Canvas-Stil konfigurieren
 ctx.strokeStyle = '#000000';
@@ -33,43 +32,7 @@ strokeColorPicker.addEventListener('input', (e) => {
     ctx.strokeStyle = e.target.value;
 });
 
-// Pinsel-Art Event
-brushTypeSelect.addEventListener('change', (e) => {
-    switch(e.target.value) {
-        case 'round':
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            break;
-        case 'square':
-            ctx.lineCap = 'square';
-            ctx.lineJoin = 'miter';
-            break;
-        case 'pen':
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            break;
-        case 'ballpoint':
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            break;
-        case 'marker':
-            ctx.lineCap = 'square';
-            ctx.lineJoin = 'round';
-            break;
-        case 'brush':
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            break;
-        case 'calligraphy':
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            break;
-        case 'pencil':
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            break;
-    }
-});
+
 
 // Canvas-Größe ändern
 resizeBtn.addEventListener('click', () => {
@@ -91,7 +54,8 @@ resizeBtn.addEventListener('click', () => {
     // Stil wiederherstellen
     ctx.strokeStyle = strokeColorPicker.value;
     ctx.lineWidth = strokeWidthSlider.value;
-    brushTypeSelect.dispatchEvent(new Event('change'));
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     
     // Alten Inhalt wiederherstellen (falls er in die neue Größe passt)
     ctx.putImageData(imageData, 0, 0);
@@ -106,92 +70,47 @@ resizeBtn.addEventListener('click', () => {
 });
 
 // Zeichnen-Funktionen
-function startDrawing(e) {
-    isDrawing = true;
-    const rect = canvas.getBoundingClientRect();
-    lastX = e.clientX - rect.left;
-    lastY = e.clientY - rect.top;
-}
-
-function draw(e) {
-    if (!isDrawing) return;
-    
-    const rect = canvas.getBoundingClientRect();
-    const currentX = e.clientX - rect.left;
-    const currentY = e.clientY - rect.top;
-
-    // Verschiedene Pinsel-Effekte
-    const brushType = brushTypeSelect.value;
-    
-    if (brushType === 'brush') {
-        // Kalligrafie-Effekt: Strichstärke basierend auf Geschwindigkeit
-        const distance = Math.sqrt(Math.pow(currentX - lastX, 2) + Math.pow(currentY - lastY, 2));
-        const speed = distance;
-        ctx.lineWidth = Math.max(1, parseInt(strokeWidthSlider.value) - speed * 0.5);
-    } else if (brushType === 'ballpoint') {
-        // Kugelschreiber-Effekt: Konsistente, dünne Linie mit leichter Variation
-        const baseWidth = parseInt(strokeWidthSlider.value);
-        const variation = Math.random() * 0.3 - 0.15; // Kleine zufällige Variation
-        ctx.lineWidth = Math.max(1, baseWidth + variation);
-        
-        // Kugelschreiber haben typischerweise eine höhere Opazität
-        ctx.globalAlpha = 0.9;
-    } else if (brushType === 'calligraphy') {
-        // Kalligrafie-Effekt: Strichstärke basierend auf Geschwindigkeit
-        const distance = Math.sqrt(Math.pow(currentX - lastX, 2) + Math.pow(currentY - lastY, 2));
-        const speed = distance;
-        ctx.lineWidth = Math.max(1, parseInt(strokeWidthSlider.value) - speed * 0.5);
-    } else {
-        // Standard-Pinsel: Konstante Linienstärke
-        ctx.lineWidth = parseInt(strokeWidthSlider.value);
-        ctx.globalAlpha = 1.0;
-    }
-
+function drawstart(event) {
     ctx.beginPath();
-    ctx.moveTo(lastX, lastY);
-    ctx.lineTo(currentX, currentY);
+    ctx.moveTo(event.pageX - canvas.offsetLeft, event.pageY - canvas.offsetTop);
+    isIdle = false;
+}
+
+function drawmove(event) {
+    if (isIdle) return;
+    ctx.lineTo(event.pageX - canvas.offsetLeft, event.pageY - canvas.offsetTop);
     ctx.stroke();
-
-    lastX = currentX;
-    lastY = currentY;
 }
 
-function stopDrawing() {
-    isDrawing = false;
+function drawend(event) {
+    if (isIdle) return;
+    drawmove(event);
+    isIdle = true;
 }
 
-// Mouse-Events
-canvas.addEventListener('mousedown', startDrawing);
-canvas.addEventListener('mousemove', draw);
-canvas.addEventListener('mouseup', stopDrawing);
-canvas.addEventListener('mouseout', stopDrawing);
+// Touch-Event-Funktionen
+function touchstart(event) { 
+    drawstart(event.touches[0]); 
+}
+
+function touchmove(event) { 
+    drawmove(event.touches[0]); 
+    event.preventDefault(); 
+}
+
+function touchend(event) { 
+    drawend(event.changedTouches[0]); 
+}
 
 // Touch-Events für mobile Geräte
-canvas.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    const touch = e.touches[0];
-    const mouseEvent = new MouseEvent('mousedown', {
-        clientX: touch.clientX,
-        clientY: touch.clientY
-    });
-    canvas.dispatchEvent(mouseEvent);
-});
+canvas.addEventListener('touchstart', touchstart, false);
+canvas.addEventListener('touchmove', touchmove, false);
+canvas.addEventListener('touchend', touchend, false);
 
-canvas.addEventListener('touchmove', (e) => {
-    e.preventDefault();
-    const touch = e.touches[0];
-    const mouseEvent = new MouseEvent('mousemove', {
-        clientX: touch.clientX,
-        clientY: touch.clientY
-    });
-    canvas.dispatchEvent(mouseEvent);
-});
-
-canvas.addEventListener('touchend', (e) => {
-    e.preventDefault();
-    const mouseEvent = new MouseEvent('mouseup', {});
-    canvas.dispatchEvent(mouseEvent);
-});
+// Mouse-Events
+canvas.addEventListener('mousedown', drawstart, false);
+canvas.addEventListener('mousemove', drawmove, false);
+canvas.addEventListener('mouseup', drawend, false);
 
 // Löschen-Button
 clearBtn.addEventListener('click', () => {
