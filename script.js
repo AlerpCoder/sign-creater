@@ -11,9 +11,11 @@ const canvasWidthInput = document.getElementById('canvasWidth');
 const canvasHeightInput = document.getElementById('canvasHeight');
 const resizeBtn = document.getElementById('resizeBtn');
 const fullscreenBtn = document.getElementById('fullscreenBtn');
+const fullscreenCloseBtn = document.getElementById('fullscreenCloseBtn');
 
 // Canvas properties
 let isIdle = true;
+let lastOrientation = window.innerWidth > window.innerHeight ? 'landscape' : 'portrait';
 
 // Configure canvas style
 ctx.strokeStyle = '#000000';
@@ -157,6 +159,89 @@ canvas.addEventListener('contextmenu', (e) => {
     e.preventDefault();
 });
 
+// Orientation change detection and auto-rotation
+function getCurrentOrientation() {
+    return window.innerWidth > window.innerHeight ? 'landscape' : 'portrait';
+}
+
+function rotateCanvasContent90Degrees() {
+    // Save current canvas content
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    
+    // Create temporary canvas for rotation
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    
+    // Set temp canvas dimensions (swapped for 90° rotation)
+    tempCanvas.width = canvas.height;
+    tempCanvas.height = canvas.width;
+    
+    // Create image from current canvas
+    const img = new Image();
+    img.onload = function() {
+        // Clear main canvas and resize if needed
+        const originalWidth = canvas.width;
+        const originalHeight = canvas.height;
+        
+        // Optionally swap canvas dimensions for better fit
+        canvas.width = originalHeight;
+        canvas.height = originalWidth;
+        
+        // Update input fields
+        canvasWidthInput.value = canvas.width;
+        canvasHeightInput.value = canvas.height;
+        
+        // Restore canvas style
+        ctx.strokeStyle = strokeColorPicker.value;
+        ctx.lineWidth = strokeWidthSlider.value;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        
+        // Rotate and draw
+        ctx.save();
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(Math.PI / 2); // 90 degrees clockwise
+        ctx.drawImage(img, -img.width / 2, -img.height / 2);
+        ctx.restore();
+    };
+    
+    // Convert canvas to image
+    img.src = canvas.toDataURL();
+}
+
+function handleOrientationChange() {
+    const currentOrientation = getCurrentOrientation();
+    
+    // Check if we switched from landscape to portrait
+    if (lastOrientation === 'landscape' && currentOrientation === 'portrait') {
+        // Only rotate if there's actual content on the canvas
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        let hasContent = false;
+        
+        // Check if canvas has any non-transparent pixels
+        for (let i = 3; i < data.length; i += 4) {
+            if (data[i] > 0) {
+                hasContent = true;
+                break;
+            }
+        }
+        
+        if (hasContent) {
+            setTimeout(() => {
+                rotateCanvasContent90Degrees();
+            }, 100); // Small delay to ensure orientation change is complete
+        }
+    }
+    
+    lastOrientation = currentOrientation;
+}
+
+// Listen for resize events to detect orientation changes
+window.addEventListener('resize', () => {
+    setTimeout(handleOrientationChange, 200);
+});
+
 // Fullscreen functionality
 let isFullscreen = false;
 let originalCanvasSize = { width: 800, height: 400 };
@@ -167,6 +252,11 @@ fullscreenBtn.addEventListener('click', () => {
     } else {
         exitFullscreen();
     }
+});
+
+// Fullscreen close button event
+fullscreenCloseBtn.addEventListener('click', () => {
+    exitFullscreen();
 });
 
 function enterFullscreen() {
@@ -242,6 +332,11 @@ function handleFullscreenChange() {
         canvasContainer.style.maxHeight = '100vh';
         canvasContainer.style.backgroundColor = '#333';
         
+        // Show close button for mobile devices
+        if (isMobileDevice()) {
+            fullscreenCloseBtn.style.display = 'flex';
+        }
+        
     } else {
         // Exit fullscreen: restore original size
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -267,8 +362,17 @@ function handleFullscreenChange() {
         canvasContainer.style.maxHeight = '';
         canvasContainer.style.backgroundColor = '';
         
+        // Hide close button
+        fullscreenCloseBtn.style.display = 'none';
+        
         // Update input fields
         canvasWidthInput.value = originalCanvasSize.width;
         canvasHeightInput.value = originalCanvasSize.height;
     }
+}
+
+// Check if device is mobile
+function isMobileDevice() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           (window.innerWidth <= 1024 && 'ontouchstart' in window);
 } 
