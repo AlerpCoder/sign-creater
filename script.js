@@ -229,9 +229,36 @@ function handleOrientationChange() {
     lastOrientation = currentOrientation;
 }
 
-// Listen for resize events to detect orientation changes
+// Listen for resize events to detect orientation changes and viewport changes
 window.addEventListener('resize', () => {
     setTimeout(handleOrientationChange, 200);
+    
+    // Handle viewport changes in fullscreen mode
+    if (isFullscreen && !isMobileDevice()) {
+        setTimeout(() => {
+            // Save current content as image before resizing
+            const tempImg = new Image();
+            tempImg.src = canvas.toDataURL();
+            
+            // Resize canvas to new screen size
+            const maxWidth = window.innerWidth - 40;
+            const maxHeight = window.innerHeight - 40;
+            
+            canvas.width = maxWidth;
+            canvas.height = maxHeight;
+            
+            // Restore style
+            ctx.strokeStyle = strokeColorPicker.value;
+            ctx.lineWidth = strokeWidthSlider.value;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            // Redraw content
+            tempImg.onload = function() {
+                ctx.drawImage(tempImg, 0, 0);
+            };
+        }, 100);
+    }
 });
 
 // Fullscreen functionality
@@ -274,7 +301,7 @@ fullscreenCloseBtn.addEventListener('click', () => {
 function enterFullscreen() {
     const canvasContainer = document.querySelector('.canvas-container');
     
-    // Save current canvas size
+    // Save current canvas size before any changes
     originalCanvasSize.width = canvas.width;
     originalCanvasSize.height = canvas.height;
     
@@ -315,25 +342,72 @@ function handleFullscreenChange() {
                      document.msFullscreenElement);
     
     if (isFullscreen) {
-        // In fullscreen: adjust canvas to screen size
-        const maxWidth = window.screen.width - 40;
-        const maxHeight = window.screen.height - 40;
+        // Save current content as image before resizing
+        const tempImg = new Image();
+        tempImg.src = canvas.toDataURL();
         
-        // Save current content
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        
-        // Enlarge canvas
-        canvas.width = maxWidth;
-        canvas.height = maxHeight;
-        
-        // Restore style
-        ctx.strokeStyle = strokeColorPicker.value;
-        ctx.lineWidth = strokeWidthSlider.value;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        
-        // Restore old content
-        ctx.putImageData(imageData, 0, 0);
+        if (isMobileDevice()) {
+            // Mobile: resize to screen and check for rotation
+            const maxWidth = window.screen.width;
+            const maxHeight = window.screen.height;
+            
+            // Check if canvas has content
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            let hasContent = false;
+            
+            for (let i = 3; i < data.length; i += 4) {
+                if (data[i] > 0) {
+                    hasContent = true;
+                    break;
+                }
+            }
+            
+            // Resize canvas
+            canvas.width = maxWidth;
+            canvas.height = maxHeight;
+            
+            // Restore style
+            ctx.strokeStyle = strokeColorPicker.value;
+            ctx.lineWidth = strokeWidthSlider.value;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            // If has content, rotate left and draw
+            if (hasContent) {
+                tempImg.onload = function() {
+                    ctx.save();
+                    ctx.translate(canvas.width / 2, canvas.height / 2);
+                    ctx.rotate(-Math.PI / 2); // 90 degrees counterclockwise (left)
+                    ctx.drawImage(tempImg, -tempImg.width / 2, -tempImg.height / 2);
+                    ctx.restore();
+                };
+            } else {
+                // No content, just draw normally
+                tempImg.onload = function() {
+                    ctx.drawImage(tempImg, 0, 0);
+                };
+            }
+        } else {
+            // Desktop: resize canvas to fullscreen dimensions
+            const maxWidth = window.innerWidth - 20;
+            const maxHeight = window.innerHeight - 20;
+            
+            // Enlarge canvas to fullscreen size
+            canvas.width = maxWidth;
+            canvas.height = maxHeight;
+            
+            // Restore style
+            ctx.strokeStyle = strokeColorPicker.value;
+            ctx.lineWidth = strokeWidthSlider.value;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            // Draw the saved content
+            tempImg.onload = function() {
+                ctx.drawImage(tempImg, 0, 0);
+            };
+        }
         
         // Change button text
         fullscreenBtn.textContent = 'Exit Fullscreen';
@@ -351,8 +425,11 @@ function handleFullscreenChange() {
         
     } else {
         // Exit fullscreen: restore original size
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        // Save current content as image before resizing
+        const tempImg = new Image();
+        tempImg.src = canvas.toDataURL();
         
+        // Restore original canvas size for both mobile and desktop
         canvas.width = originalCanvasSize.width;
         canvas.height = originalCanvasSize.height;
         
@@ -362,8 +439,10 @@ function handleFullscreenChange() {
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         
-        // Restore old content (as much as possible)
-        ctx.putImageData(imageData, 0, 0);
+        // Restore old content using image
+        tempImg.onload = function() {
+            ctx.drawImage(tempImg, 0, 0, originalCanvasSize.width, originalCanvasSize.height);
+        };
         
         // Reset button text
         fullscreenBtn.textContent = 'Fullscreen';
