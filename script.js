@@ -165,25 +165,14 @@ function getCurrentOrientation() {
 }
 
 function rotateCanvasContent90Degrees() {
-    // Save current canvas content
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    
-    // Create temporary canvas for rotation
-    const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d');
-    
-    // Set temp canvas dimensions (swapped for 90° rotation)
-    tempCanvas.width = canvas.height;
-    tempCanvas.height = canvas.width;
-    
     // Create image from current canvas
     const img = new Image();
     img.onload = function() {
-        // Clear main canvas and resize if needed
+        // Save original dimensions
         const originalWidth = canvas.width;
         const originalHeight = canvas.height;
         
-        // Optionally swap canvas dimensions for better fit
+        // Swap canvas dimensions
         canvas.width = originalHeight;
         canvas.height = originalWidth;
         
@@ -191,17 +180,20 @@ function rotateCanvasContent90Degrees() {
         canvasWidthInput.value = canvas.width;
         canvasHeightInput.value = canvas.height;
         
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
         // Restore canvas style
         ctx.strokeStyle = strokeColorPicker.value;
         ctx.lineWidth = strokeWidthSlider.value;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         
-        // Rotate and draw
+        // Rotate and draw the image
         ctx.save();
         ctx.translate(canvas.width / 2, canvas.height / 2);
         ctx.rotate(Math.PI / 2); // 90 degrees clockwise
-        ctx.drawImage(img, -img.width / 2, -img.height / 2);
+        ctx.drawImage(img, -originalWidth / 2, -originalHeight / 2);
         ctx.restore();
     };
     
@@ -256,6 +248,26 @@ fullscreenBtn.addEventListener('click', () => {
 
 // Fullscreen close button event
 fullscreenCloseBtn.addEventListener('click', () => {
+    // Check if we should rotate (from landscape to portrait)
+    const currentOrientation = getCurrentOrientation();
+    if (currentOrientation === 'portrait') {
+        // Check if canvas has content before rotating
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        let hasContent = false;
+        
+        for (let i = 3; i < data.length; i += 4) {
+            if (data[i] > 0) {
+                hasContent = true;
+                break;
+            }
+        }
+        
+        if (hasContent) {
+            rotateCanvasContent90Degrees();
+        }
+    }
+    
     exitFullscreen();
 });
 
